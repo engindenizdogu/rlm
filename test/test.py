@@ -1,9 +1,4 @@
-from rlm.rlm_repl import RLM_REPL
 import random
-
-MODEL = "gpt-5-nano-2025-08-07"
-RECURSIVE_MODEL = "gpt-5-nano-2025-08-07"
-NUM_CONTEXT_LINES = 100
 
 def generate_massive_context(num_lines: int = 1_000_000, answer: str = "1298418") -> str:
     print(f"Generating massive context with {num_lines} lines...")
@@ -25,24 +20,12 @@ def generate_massive_context(num_lines: int = 1_000_000, answer: str = "1298418"
     
     return "\n".join(lines)
 
+# Test for the 'generate_massive_context' function. Generate and write to a .txt file
 def main():
-    print("Example of using RLM (REPL) with GPT-5-nano on a needle-in-haystack problem.")
     answer = str(random.randint(1000000, 9999999))
-    context = generate_massive_context(num_lines=NUM_CONTEXT_LINES, answer=answer)
+    context = generate_massive_context(num_lines=100, answer=answer)
     with open("massive_context.txt", "w") as f:
         f.write(context)
-
-    rlm = RLM_REPL(
-        model=MODEL,
-        recursive_model=RECURSIVE_MODEL,
-        enable_logging=True,
-        depth=0,
-        max_iterations=10
-    )
-    query = "I'm looking for a magic number. What is it?"
-    result, messages = rlm.completion(context=context, query=query)
-    print(f"Result: {result}. Expected: {answer}")
-    #print(messages)
 
 if __name__ == "__main__":
     main()

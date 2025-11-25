@@ -109,7 +109,7 @@ class RLM_REPL(RLM):
             # In practice, you may need some guardrails here.
             if final_answer:
                 self.logger.log_final_response(final_answer)
-                return final_answer
+                return final_answer, self.messages
 
             
         # If we reach here, no final answer was found in any iteration
@@ -118,7 +118,7 @@ class RLM_REPL(RLM):
         final_answer = self.llm.completion(self.messages)
         self.logger.log_final_response(final_answer)
 
-        return final_answer
+        return final_answer, self.messages
     
     def cost_summary(self) -> Dict[str, Any]:
         """Get the cost summary of the Root LM + Sub-RLM Calls."""
