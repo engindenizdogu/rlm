@@ -115,7 +115,40 @@ export PRIME_API_KEY=...
 
 
 ### Model Providers
-We currently support most major clients (OpenAI, Anthropic), as well as the router platforms (OpenRouter, Portkey, LiteLLM). For local models, we recommend using vLLM (which interfaces with the [OpenAI client](https://github.com/alexzhang13/rlm/blob/main/rlm/clients/openai.py)). To view or add support for more clients, start by looking at [`rlm/clients/`](https://github.com/alexzhang13/rlm/tree/main/rlm/clients).
+We currently support most major clients (OpenAI, Anthropic), as well as the router platforms (OpenRouter, Portkey, LiteLLM). For local models, we support both vLLM and Ollama:
+- **vLLM**: Interfaces with the [OpenAI client](https://github.com/alexzhang13/rlm/blob/main/rlm/clients/openai.py)
+- **Ollama**: Use the [Ollama client](https://github.com/alexzhang13/rlm/blob/main/rlm/clients/ollama.py) for running models locally with Ollama
+
+#### Using Ollama
+To use Ollama with RLM, first install and start the Ollama server:
+```bash
+# Install Ollama from https://ollama.ai
+ollama serve  # Start the Ollama server (runs on http://localhost:11434)
+ollama pull qwen2.5:7b  # Pull a model (in another terminal)
+```
+
+Then use it with RLM:
+```python
+from rlm import RLM
+
+rlm = RLM(
+    backend="ollama",
+    backend_kwargs={"model_name": "qwen2.5:7b"},
+    verbose=True,
+)
+
+print(rlm.completion("What is the capital of France?").response)
+```
+
+You can also specify a custom Ollama host:
+```python
+rlm = RLM(
+    backend="ollama",
+    backend_kwargs={"model_name": "qwen2.5:7b", "host": "http://localhost:11434"},
+)
+```
+
+To view or add support for more clients, start by looking at [`rlm/clients/`](https://github.com/alexzhang13/rlm/tree/main/rlm/clients).
 
 ## Relevant Reading
 * **[Dec '25]** [Recursive Language Models arXiv](https://arxiv.org/abs/2512.24601)
