@@ -1,4 +1,3 @@
-import os
 import random
 from dotenv import load_dotenv
 from rlm import RLM
@@ -29,7 +28,7 @@ def main():
     logger = RLMLogger(log_dir="./logs")
 
     print("Example of using RLM (REPL) on a needle-in-haystack problem.")
-    NUM_LINES = 100_000  # For testing, we can use a smaller number. Adjust as needed.
+    NUM_LINES = 50  # For testing, we can use a smaller number. Adjust as needed.
     answer = str(random.randint(1000000, 9999999))
     context = generate_massive_context(num_lines=NUM_LINES, answer=answer)
 
@@ -38,11 +37,8 @@ def main():
         f.write(context)
 
     rlm = RLM(
-        backend="openai",  # or "portkey", etc.
-        backend_kwargs={
-            "model_name": "gpt-5-nano-2025-08-07", 
-            "api_key": os.getenv("OPENAI_API_KEY"),
-        },
+        backend="ollama",
+        backend_kwargs={"model_name": "qwen3:8b"}, #qwen2.5:7b, qwen2.5-coder:7b, qwen3:8b, deepseek-r1:8b
         environment="local",
         environment_kwargs={},
         max_depth=1,
