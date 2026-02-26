@@ -3,7 +3,6 @@ from concurrent.futures import ProcessPoolExecutor
 from rlm import RLM
 from .tokenizer import tokenize, count_words
 
-
 def _run_rlm_completion_worker(rlm_kwargs, chunk, root_prompt):
     """
     Worker function for ProcessPoolExecutor to run a single RLM completion.
@@ -17,7 +16,6 @@ def _run_rlm_completion_worker(rlm_kwargs, chunk, root_prompt):
         import traceback
         traceback.print_exc()
         return f"Error: {str(e)}"
-
 
 class DeepRLM:
     def __init__(self, num_rlms_in_depth = 2, max_system_depth = 10, token_limit = 1000, **rlm_kwargs):
@@ -44,7 +42,6 @@ class DeepRLM:
         print("\n=============== DEEP RLM ================")
         print(f"Initialized DeepRLM with\n\tnum_rlms_in_depth={num_rlms_in_depth},\n\tmax_system_depth={max_system_depth},\n\ttoken_limit={token_limit}\n")
 
-
     def simple_decomposition(self, context, token_multiplier=1.5):
         """
         A simple context decomposition method that splits the context into chunks based on a token limit. This
@@ -63,7 +60,7 @@ class DeepRLM:
         if num_words == 0:
             raise ValueError("Context must not be empty.")
 
-        num_tokens = tokenize(context)
+        num_tokens = tokenize(context, model=self.rlm_kwargs.get("backend_kwargs", {}).get("model_name", "gpt-5-nano"))
         tokens_per_word = num_tokens / num_words
         print(f"Read context with word count: {num_words}, token count: {num_tokens}, tokens per word: {tokens_per_word:.2f}")
 

@@ -1,7 +1,7 @@
 from pathlib import Path
 import tiktoken
 
-def tokenize(input: str | Path, model: str = "gpt-5-nano") -> int:
+def tokenize(input: str | Path, model: str = "gpt-5-nano-2025-08-07") -> int:
     """
     Tokenize a string or text file path and return the token count.
 
