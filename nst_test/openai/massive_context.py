@@ -30,7 +30,7 @@ def main():
 
     print("Example of using RLM (REPL) on a needle-in-haystack problem.")
     answer = str(random.randint(1000000, 9999999))
-    context = generate_massive_context(num_lines=100, answer=answer)
+    context = generate_massive_context(num_lines=10, answer=answer)
 
     # Save context file for debugging and inspection
     with open("massive_context.txt", "w") as f:
@@ -45,7 +45,7 @@ def main():
         environment="local",
         environment_kwargs={},
         max_depth=1,
-        max_iterations=5,
+        max_iterations=15,
         logger=logger,
         verbose=True,  # For printing to console with rich, disabled by default.
     )
@@ -55,7 +55,7 @@ def main():
         root_prompt="I'm looking for a magic number. I'm not sure if it's in this chunk, but tell me if you can find it."  # User prompt
     )
 
-    print(f"Result: {result}. Expected: {answer}")
+    print(f"Result: {result.response}.\nExpected: {answer}")
 
 if __name__ == "__main__":
     main()

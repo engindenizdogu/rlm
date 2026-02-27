@@ -18,6 +18,7 @@ from rlm.logger import RLMLogger, VerbosePrinter
 from rlm.utils.parsing import (
     find_code_blocks,
     find_final_answer,
+    find_stop_workflow,
     format_iteration,
 )
 from rlm.utils.prompts import (
@@ -240,6 +241,10 @@ class RLM:
                 final_answer = find_final_answer(iteration.response, environment=environment)
                 iteration.final_answer = final_answer
 
+                # Check if RLM has a STOP_WORKFLOW tag to end the workflow early.
+                should_stop_workflow = find_stop_workflow(iteration.response)
+                iteration.stop_workflow = should_stop_workflow
+
                 # If logger is used, log the iteration.
                 if self.logger:
                     self.logger.log(iteration)
@@ -263,6 +268,7 @@ class RLM:
                         else "unknown",
                         prompt=prompt,
                         response=final_answer,
+                        stop_workflow=should_stop_workflow,
                         usage_summary=usage,
                         execution_time=time_end - time_start,
                     )
@@ -276,6 +282,7 @@ class RLM:
             # Default behavior: we run out of iterations, provide one final answer
             time_end = time.perf_counter()
             final_answer = self._default_answer(message_history, lm_handler)
+            should_stop_workflow = find_stop_workflow(final_answer)
             usage = lm_handler.get_usage_summary()
             self.verbose.print_final_answer(final_answer)
             self.verbose.print_summary(self.max_iterations, time_end - time_start, usage.to_dict())
@@ -290,6 +297,7 @@ class RLM:
                 else "unknown",
                 prompt=prompt,
                 response=final_answer,
+                stop_workflow=should_stop_workflow,
                 usage_summary=usage,
                 execution_time=time_end - time_start,
             )
@@ -340,6 +348,7 @@ class RLM:
                     prompt=current_prompt,
                     response=response,
                     final_answer=response,
+                    stop_workflow=find_stop_workflow(response),
                     code_blocks=[],
                 )
             )

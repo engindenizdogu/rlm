@@ -8,6 +8,7 @@ from rlm.utils.parsing import (
     convert_context_for_repl,
     find_code_blocks,
     find_final_answer,
+    find_stop_workflow,
     format_execution_result,
     format_iteration,
 )
@@ -238,6 +239,40 @@ multiline answer)"""
             assert "Error" in result or "not found" in result.lower()
         finally:
             env.cleanup()
+
+
+class TestFindStopWorkflow:
+    """Tests for find_stop_workflow function."""
+
+    def test_stop_workflow_true(self):
+        text = "Reasoning...\nSTOP_WORKFLOW(true)"
+        result = find_stop_workflow(text)
+        assert result is True
+
+    def test_stop_workflow_false(self):
+        text = "Reasoning...\nSTOP_WORKFLOW(false)"
+        result = find_stop_workflow(text)
+        assert result is False
+
+    def test_stop_workflow_missing(self):
+        text = "Reasoning without workflow marker"
+        result = find_stop_workflow(text)
+        assert result is None
+
+    def test_stop_workflow_multiple_markers_is_invalid(self):
+        text = "STOP_WORKFLOW(true)\nSTOP_WORKFLOW(false)"
+        result = find_stop_workflow(text)
+        assert result is None
+
+    def test_stop_workflow_rejects_uppercase_bools(self):
+        text = "STOP_WORKFLOW(True)"
+        result = find_stop_workflow(text)
+        assert result is None
+
+    def test_stop_workflow_rejects_numeric_values(self):
+        text = "STOP_WORKFLOW(1)"
+        result = find_stop_workflow(text)
+        assert result is None
 
 
 class TestFormatExecutionResult:

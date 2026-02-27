@@ -18,6 +18,7 @@ rlm = RLM(
     environment="local",
     environment_kwargs={},
     max_depth=1,
+    max_iterations=10,
     logger=logger,
     verbose=True,  # For printing to console with rich, disabled by default.
 )

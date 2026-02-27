@@ -62,6 +62,28 @@ def find_final_answer(text: str, environment: "BaseEnv | None" = None) -> str | 
     return None
 
 
+def find_stop_workflow(text: str) -> bool | None:
+    """
+    Find STOP_WORKFLOW(true|false) statement in response and return bool.
+
+    Returns None when STOP_WORKFLOW is missing, duplicated, or malformed.
+
+    Args:
+        text: The response text to parse
+
+    Returns:
+        True or False if exactly one valid STOP_WORKFLOW tag is found, otherwise None
+    """
+    pattern = r"^\s*STOP_WORKFLOW\((true|false)\)\s*$"
+    matches = re.findall(pattern, text, re.MULTILINE)
+
+    # There should be exactly one match for STOP_WORKFLOW, otherwise it's malformed or duplicated
+    if len(matches) != 1:
+        return None
+
+    return matches[0] == "true"
+
+
 def format_iteration(
     iteration: RLMIteration, max_character_length: int = 20000
 ) -> list[dict[str, str]]:

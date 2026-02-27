@@ -95,6 +95,7 @@ class RLMChatCompletion:
     root_model: str
     prompt: str | dict[str, Any]
     response: str
+    stop_workflow: bool
     usage_summary: UsageSummary
     execution_time: float
 
@@ -103,6 +104,7 @@ class RLMChatCompletion:
             "root_model": self.root_model,
             "prompt": self.prompt,
             "response": self.response,
+            "stop_workflow": self.stop_workflow,
             "usage_summary": self.usage_summary.to_dict(),
             "execution_time": self.execution_time,
         }
@@ -113,6 +115,7 @@ class RLMChatCompletion:
             root_model=data.get("root_model"),
             prompt=data.get("prompt"),
             response=data.get("response"),
+            stop_workflow=data.get("stop_workflow", False),
             usage_summary=UsageSummary.from_dict(data.get("usage_summary")),
             execution_time=data.get("execution_time"),
         )
@@ -168,6 +171,7 @@ class RLMIteration:
     response: str
     code_blocks: list[CodeBlock]
     final_answer: str | None = None
+    stop_workflow: bool | None = None
     iteration_time: float | None = None
 
     def to_dict(self):
@@ -176,6 +180,7 @@ class RLMIteration:
             "response": self.response,
             "code_blocks": [code_block.to_dict() for code_block in self.code_blocks],
             "final_answer": self.final_answer,
+            "stop_workflow": self.stop_workflow,
             "iteration_time": self.iteration_time,
         }
 

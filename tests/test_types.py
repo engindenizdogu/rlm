@@ -130,6 +130,7 @@ class TestRLMIteration:
         iteration = RLMIteration(prompt="test prompt", response="test response", code_blocks=[])
         assert iteration.prompt == "test prompt"
         assert iteration.final_answer is None
+        assert iteration.stop_workflow is None
 
     def test_with_final_answer(self):
         iteration = RLMIteration(
@@ -147,12 +148,14 @@ class TestRLMIteration:
             prompt="p",
             response="r",
             code_blocks=[block],
+            stop_workflow=True,
             iteration_time=1.5,
         )
         d = iteration.to_dict()
         assert d["prompt"] == "p"
         assert d["response"] == "r"
         assert len(d["code_blocks"]) == 1
+        assert d["stop_workflow"] is True
         assert d["iteration_time"] == 1.5
 
 
