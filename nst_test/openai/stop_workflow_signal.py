@@ -1,32 +1,56 @@
 import os
+import random
 import textwrap
 from dotenv import load_dotenv
 from rlm import RLM
 from rlm.logger import RLMLogger
 
-load_dotenv()
+def generate_massive_context(num_lines: int = 1_000_000, answer: str = "1298418") -> str:
+    print(f"Generating massive context with {num_lines} lines...")
+    
+    # Set of random words to use
+    random_words = ["blah", "random", "text", "data", "content", "information", "sample"]
+    
+    lines = []
+    for _ in range(num_lines):
+        num_words = random.randint(3, 8)
+        line_words = [random.choice(random_words) for _ in range(num_words)]
+        lines.append(" ".join(line_words))
+    
+    # Insert the magic number at a random position (somewhere near the end)
+    magic_position = random.randint(int(num_lines * 0.5), int(num_lines * 0.75))
+    lines[magic_position] = f"The magic number is {answer}"
+    
+    print(f"Magic number inserted at position {magic_position}")
+    
+    return "\n".join(lines)
 
-logger = RLMLogger(log_dir="./logs")
+def main():
+    # Create large context
+    """
+    print("Example of using RLM (REPL) on a needle-in-haystack problem.")
+    answer = str(random.randint(1000000, 9999999))
+    context = generate_massive_context(num_lines=10, answer=answer)
+    
+    # Save context file for debugging and inspection
+    with open("massive_context.txt", "w") as f:
+        f.write(context)
+    """
 
-CUSTOM_SYSTEM_PROMPT = textwrap.dedent(
-    """You are tasked with answering a query with associated context. You can access, transform, and analyze this context interactively in a REPL environment that can recursively query sub-LLMs, which you are strongly encouraged to use as much as possible. You will be queried iteratively until you provide a final answer.
+    # Read context file
+    with open("massive_context.txt", "r") as f:
+        context = f.read()
 
-    You are one instance inside a multi-layered RLM workflow. A higher-level orchestrator may run many RLM instances across layers, either sequentially or in parallel, where each instance contributes partial progress toward a shared global objective. `FINAL(...)` and `FINAL_VAR(...)` indicate local completion for this specific RLM instance, while `STOP_WORKFLOW(true|false)` is a separate global recommendation about whether the overall multi-instance workflow should terminate. `STOP_WORKFLOW(true)` is only valid when a final answer is returned in the same response and the global objective is likely satisfied.
+    CUSTOM_SYSTEM_PROMPT = textwrap.dedent(
+    """You are currently executing an RLM instance inside a multi-layered RLM workflow. You are not the orchestrator, and you cannot control or inspect other instances directly. A higher-level orchestrator may run many RLM instances across layers, either sequentially or in parallel, where each instance contributes partial progress toward a shared global objective.
+    
+    You are tasked with answering a query with associated context. You can access, transform, and analyze this context interactively in a REPL environment that can recursively query sub-LLMs, and you are strongly encouraged to use them as much as possible. You will be queried iteratively until you provide a final answer. One RLM instance may make many recursive sub-LM calls (via `llm_query` and `llm_query_batched`) across multiple iterations before returning a final answer.
 
     The REPL environment is initialized with:
     1. A `context` variable that contains extremely important information about your query. You should check the content of the `context` variable to understand what you are working with. Make sure you look through it sufficiently as you answer your query.
     2. A `llm_query` function that allows you to query an LLM (that can handle around 500K chars) inside your REPL environment.
     3. A `llm_query_batched` function that allows you to query multiple prompts concurrently: `llm_query_batched(prompts: List[str]) -> List[str]`. This is much faster than sequential `llm_query` calls when you have multiple independent queries. Results are returned in the same order as the input prompts.
     4. The ability to use `print()` statements to view the output of your REPL code and continue your reasoning.
-
-    In addition to your normal reasoning output, you must always include exactly one function call of the form `STOP_WORKFLOW(true)` or `STOP_WORKFLOW(false)` in every response. This signal is separate from `FINAL(...)` and `FINAL_VAR(...)`. Use lowercase boolean literals only (`true`/`false`), not `0/1`. Return this as plain text, NOT in code.
-    - `FINAL(...)` and `FINAL_VAR(...)` indicate this RLM instance is returning a final answer.
-    - `STOP_WORKFLOW(true|false)` indicates whether this instance recommends terminating the overall multi-instance workflow.
-    - Set `STOP_WORKFLOW(true)` only when you are also returning `FINAL(...)` or `FINAL_VAR(...)`, and you are confident the overall user objective is globally satisfied.
-    - If you are not returning `FINAL(...)` or `FINAL_VAR(...)`, you must output `STOP_WORKFLOW(false)`.
-    - Even when returning a final answer, `STOP_WORKFLOW(false)` is valid if additional RLM instances may still be needed.
-
-    Example: if the task is to find two magic numbers and this instance finds only one, it can return a final local result but should output `STOP_WORKFLOW(false)` because the global objective is not yet complete. If the task is to find one magic number and this instance confidently finds it, it can return a final answer with `STOP_WORKFLOW(true)`. This is a simple illustration, and examples are not limited to needle-in-a-haystack problems.
 
     You will only be able to see truncated outputs from the REPL environment, so you should use the query LLM function on variables you want to analyze. You will find this function especially useful when you have to analyze the semantics of the context. Use these variables as buffers to build up your final answer.
     Make sure to explicitly look through the entire context in REPL before answering your query. An example strategy is to first look at the context and figure out a chunking strategy, then break up the context into smart chunks, and query an LLM per chunk with a particular question and save the answers to a buffer, then query an LLM with all the buffers to produce your final answer.
@@ -88,37 +112,78 @@ CUSTOM_SYSTEM_PROMPT = textwrap.dedent(
     ```
     In the next step, we can return FINAL_VAR(final_answer).
 
-    IMPORTANT: When you are done with the iterative process, you MUST provide a final answer inside a `FINAL(...)` or `FINAL_VAR(...)` function when you have completed your task, NOT in code. Do not use these tags unless you have completed your task. You have two options:
+    COMPLETION SIGNALS (IMPORTANT):
+    Local completion (FINAL|FINAL_VAR):
+    When you are done with the iterative process, you MUST provide a final answer inside a `FINAL(...)` or `FINAL_VAR(...)` function when you have completed your task, NOT in code. Do not use these tags unless you have completed your task. You have two options:
     1. Use FINAL(your final answer here) to provide the answer directly
     2. Use FINAL_VAR(variable_name) to return a variable you have created in the REPL environment as your final output
 
-    You must also include exactly one `STOP_WORKFLOW(true)` or `STOP_WORKFLOW(false)` call in every response, as plain text and NOT in code.
+    Global workflow recommendation (STOP_WORKFLOW):
+    When you are returning a final answer, you must also include exactly one `STOP_WORKFLOW(true)` or `STOP_WORKFLOW(false)` call in that same final response. Use lowercase boolean literals only (`true`/`false`), not `0/1`. Return this as plain text, NOT in code.
+    - `FINAL(...)` and `FINAL_VAR(...)` indicate this RLM instance is returning a final answer.
+    - `STOP_WORKFLOW(true|false)` indicates whether this instance recommends terminating the overall multi-instance workflow.
+    - Set `STOP_WORKFLOW(true)` only when you are also returning `FINAL(...)` or `FINAL_VAR(...)`, and you are confident the overall user objective is globally satisfied.
+    - If you are not returning `FINAL(...)` or `FINAL_VAR(...)`, do not output any `STOP_WORKFLOW(...)` call yet.
+    - Even when returning a final answer, `STOP_WORKFLOW(false)` is valid if additional RLM instances may still be needed.
+
+    Example: if the task is to find two magic numbers and this instance finds only one, it can return a final local result but should output `STOP_WORKFLOW(false)` because the global objective is not yet complete. If the task is to find one magic number and this instance confidently finds it, it can return a final answer with `STOP_WORKFLOW(true)`. This is a simple illustration, and examples are not limited to needle-in-a-haystack problems.
+    
     Valid combinations:
     - Final answer provided + `STOP_WORKFLOW(true)`
     - Final answer provided + `STOP_WORKFLOW(false)`
-    - No final answer provided + `STOP_WORKFLOW(false)`
+    - No final answer provided + no `STOP_WORKFLOW(...)`
     Invalid combination:
     - No final answer provided + `STOP_WORKFLOW(true)`
+    - No final answer provided + `STOP_WORKFLOW(false)`
 
     Think step by step carefully, plan, and execute this plan immediately in your response -- do not just say "I will do this" or "I will do that". Output to the REPL environment and recursive LLMs as much as possible. Remember to explicitly answer the original query in your final answer.
     """
     )
 
-rlm = RLM(
-    backend="openai",  # or "portkey", etc.
-    backend_kwargs={
-        "model_name": "gpt-5-nano-2025-08-07", 
-        "api_key": os.getenv("OPENAI_API_KEY"),
-    },
-    environment="local",
-    environment_kwargs={},
-    max_depth=1,
-    max_iterations=10,
-    custom_system_prompt=CUSTOM_SYSTEM_PROMPT,
-    logger=logger,
-    verbose=False,  # For printing to console with rich, disabled by default.
-)
+    #ROOT_PROMT = "I'm looking for a magic number."
 
-result = rlm.completion("Print me the first 100 powers of two, each on a newline.")
+    #ROOT_PROMT = "I'm looking for two numbers."
 
-print(result)
+    #ROOT_PROMT = "I'm looking for 2 magic numbers. Return the magic numbers if you can find them in the context. If you can only find one, return that one. If you can't find any, return 'I couldn't find any magic numbers.'"
+
+    #ROOT_PROMT = "I'm looking for a magic number. Return the magic number if you can find it in the context. If you can't find any, return 'I couldn't find any magic numbers.'"
+
+    #ROOT_PROMT = "I'm looking for a magic number. I'm not sure if it's in this chunk, but tell me if you can find it."
+    
+    #ROOT_PROMT = "I'm looking for a magic number. I know that there is ONLY one magic number in the entire context. Return the magic number if you can find it in your chunk. If you can't find any, return 'I couldn't find any magic numbers.'"
+
+    #ROOT_PROMT = "I'm looking for two magic numbers."
+
+    ROOT_PROMT = "Where is Stevens Institute of Technology located?"
+
+    #ROOT_PROMT = "Assume you know nothing and presented only with the given context. Answer this question: Where is Stevens Institute of Technology located?"
+    
+    # Initialize RLM with custom system prompt
+    load_dotenv()
+    logger = RLMLogger(log_dir="./logs")
+    rlm = RLM(
+        backend="openai",  # or "portkey", etc.
+        backend_kwargs={
+            "model_name": "gpt-5-nano-2025-08-07", 
+            "api_key": os.getenv("OPENAI_API_KEY"),
+        },
+        environment="local",
+        environment_kwargs={},
+        max_depth=1,
+        max_iterations=10,
+        custom_system_prompt=CUSTOM_SYSTEM_PROMPT,
+        logger=logger,
+        verbose=True,  # For printing to console with rich, disabled by default.
+    )
+
+    result = rlm.completion(
+        prompt=context,  # The file content (large context)
+        root_prompt=ROOT_PROMT  # User prompt
+    )
+
+    #print(f"Result: {result.response}.\nExpected: {answer}")
+    print(f"Result: {result.response}")
+    print(f"Stop workflow signal: {result.stop_workflow}")
+
+if __name__ == "__main__":
+    main()

@@ -57,6 +57,7 @@ class LMRequestHandler(StreamRequestHandler):
                 root_model=request.model or client.model_name,
                 prompt=request.prompt,
                 response=content,
+                stop_workflow=False,
                 usage_summary=usage_summary,
                 execution_time=end_time - start_time,
             )
@@ -83,6 +84,7 @@ class LMRequestHandler(StreamRequestHandler):
                 root_model=request.model or client.model_name,
                 prompt=prompt,
                 response=content,
+                stop_workflow=False,
                 usage_summary=usage_summary,
                 execution_time=total_time / len(request.prompts),  # approximate per-prompt time
             )
