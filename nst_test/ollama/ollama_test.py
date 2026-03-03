@@ -9,7 +9,9 @@ SETUP REQUIRED:
 """
 
 import asyncio
+
 from rlm.clients.ollama import OllamaClient
+
 
 def test_basic_completion():
     """Test basic string prompt completion."""

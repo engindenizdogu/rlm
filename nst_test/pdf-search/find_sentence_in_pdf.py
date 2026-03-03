@@ -4,15 +4,15 @@ Script to find a specific sentence in a PDF document.
 Supports pypdf, PyPDF2, and pdfplumber libraries.
 """
 
-import sys
 import re
+import sys
 from pathlib import Path
 
 
 def extract_text_pypdf(pdf_path):
     """Extract text using pypdf library."""
     import pypdf
-    
+
     pages_text = []
     with open(pdf_path, 'rb') as file:
         reader = pypdf.PdfReader(file)
@@ -25,7 +25,7 @@ def extract_text_pypdf(pdf_path):
 def extract_text_pypdf2(pdf_path):
     """Extract text using PyPDF2 library."""
     import PyPDF2
-    
+
     pages_text = []
     with open(pdf_path, 'rb') as file:
         reader = PyPDF2.PdfReader(file)
@@ -38,7 +38,7 @@ def extract_text_pypdf2(pdf_path):
 def extract_text_pdfplumber(pdf_path):
     """Extract text using pdfplumber library."""
     import pdfplumber
-    
+
     pages_text = []
     with pdfplumber.open(pdf_path) as pdf:
         for i, page in enumerate(pdf.pages):
@@ -54,19 +54,19 @@ def get_pdf_extractor():
         return extract_text_pypdf, "pypdf"
     except ImportError:
         pass
-    
+
     try:
         import PyPDF2
         return extract_text_pypdf2, "PyPDF2"
     except ImportError:
         pass
-    
+
     try:
         import pdfplumber
         return extract_text_pdfplumber, "pdfplumber"
     except ImportError:
         pass
-    
+
     return None, None
 
 
@@ -90,24 +90,24 @@ def find_sentence_in_pdf(pdf_path, search_sentence, case_sensitive=False):
         List of tuples (page_number, context) where the sentence was found
     """
     extractor, library_name = get_pdf_extractor()
-    
+
     if extractor is None:
         print("Error: No PDF library found. Please install one of:")
         print("  - pypdf:       pip install pypdf")
         print("  - PyPDF2:      pip install PyPDF2")
         print("  - pdfplumber:  pip install pdfplumber")
         sys.exit(1)
-    
+
     print(f"Using {library_name} to read PDF...")
-    
+
     # Extract text from all pages
     pages_text = extractor(pdf_path)
-    
+
     # Normalize the search sentence
     search_normalized = normalize_text(search_sentence)
     if not case_sensitive:
         search_normalized = search_normalized.lower()
-    
+
     # Search for the sentence
     results = []
     for page_num, page_text in pages_text:
@@ -115,22 +115,22 @@ def find_sentence_in_pdf(pdf_path, search_sentence, case_sensitive=False):
         text_normalized = normalize_text(page_text)
         if not case_sensitive:
             text_normalized = text_normalized.lower()
-        
+
         # Check if the sentence is in this page
         if search_normalized in text_normalized:
             # Find the position and extract context
             pos = text_normalized.find(search_normalized)
-            
+
             # Extract context (100 chars before and after)
             start = max(0, pos - 100)
             end = min(len(text_normalized), pos + len(search_normalized) + 100)
             context = text_normalized[start:end]
-            
+
             # Highlight the found sentence
             context = context.replace(search_normalized, f">>>{search_normalized}<<<")
-            
+
             results.append((page_num, context))
-    
+
     return results
 
 
@@ -138,27 +138,27 @@ def main():
     # Default values
     pdf_path = "Speech and Language Processing - Daniel Jurafsky, James H. Martin.pdf"
     search_sentence = "Chinese has about 100,000 Chinese characters"
-    
+
     # Parse command line arguments
     if len(sys.argv) > 1:
         pdf_path = sys.argv[1]
     if len(sys.argv) > 2:
         search_sentence = sys.argv[2]
-    
+
     # Convert to Path object
     pdf_file = Path(pdf_path)
-    
+
     if not pdf_file.exists():
         print(f"Error: PDF file not found: {pdf_path}")
         sys.exit(1)
-    
+
     print(f"Searching for: '{search_sentence}'")
     print(f"In PDF: {pdf_file.name}")
     print("-" * 80)
-    
+
     # Search for the sentence
     results = find_sentence_in_pdf(pdf_file, search_sentence)
-    
+
     if results:
         print(f"\n✓ Found {len(results)} occurrence(s):\n")
         for page_num, context in results:
@@ -166,7 +166,7 @@ def main():
             print(f"  ...{context}...")
             print()
     else:
-        print(f"\n✗ Sentence not found in the PDF.")
+        print("\n✗ Sentence not found in the PDF.")
         print("\nTips:")
         print("  - Try searching for a shorter phrase")
         print("  - Check for typos or formatting differences")

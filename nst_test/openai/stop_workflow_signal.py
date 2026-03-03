@@ -1,44 +1,26 @@
 import os
+import sys
 import random
 import textwrap
 from dotenv import load_dotenv
 from rlm import RLM
 from rlm.logger import RLMLogger
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from context_generation.context_generator import generate_massive_context, insert_location_needle
 
-def generate_massive_context(num_lines: int = 1_000_000, answer: str = "1298418") -> str:
-    print(f"Generating massive context with {num_lines} lines...")
-    
-    # Set of random words to use
-    random_words = ["blah", "random", "text", "data", "content", "information", "sample"]
-    
-    lines = []
-    for _ in range(num_lines):
-        num_words = random.randint(3, 8)
-        line_words = [random.choice(random_words) for _ in range(num_words)]
-        lines.append(" ".join(line_words))
-    
-    # Insert the magic number at a random position (somewhere near the end)
-    magic_position = random.randint(int(num_lines * 0.5), int(num_lines * 0.75))
-    lines[magic_position] = f"The magic number is {answer}"
-    
-    print(f"Magic number inserted at position {magic_position}")
-    
-    return "\n".join(lines)
 
 def main():
     # Create large context
-    """
     print("Example of using RLM (REPL) on a needle-in-haystack problem.")
-    answer = str(random.randint(1000000, 9999999))
-    context = generate_massive_context(num_lines=10, answer=answer)
+    context = generate_massive_context(num_lines=10000, number_of_needles=2)
+    context = insert_location_needle(context)
     
     # Save context file for debugging and inspection
-    with open("massive_context.txt", "w") as f:
+    with open("../openai/input/massive_context.txt", "w") as f:
         f.write(context)
-    """
 
     # Read context file
-    with open("massive_context.txt", "r") as f:
+    with open("../openai/input/massive_context.txt") as f:
         context = f.read()
 
     CUSTOM_SYSTEM_PROMPT = textwrap.dedent(
@@ -140,31 +122,26 @@ def main():
     """
     )
 
-    #ROOT_PROMT = "I'm looking for a magic number."
+    #ROOT_PROMT = "I'm looking for a number in the context."
 
-    #ROOT_PROMT = "I'm looking for two numbers."
+    #ROOT_PROMT = "I'm looking for a number. I know that there is ONLY one number in the entire context. Return the number if you can find it in your chunk. If you can't find any, return 'I couldn't find any magic numbers.'"
 
-    #ROOT_PROMT = "I'm looking for 2 magic numbers. Return the magic numbers if you can find them in the context. If you can only find one, return that one. If you can't find any, return 'I couldn't find any magic numbers.'"
-
-    #ROOT_PROMT = "I'm looking for a magic number. Return the magic number if you can find it in the context. If you can't find any, return 'I couldn't find any magic numbers.'"
-
-    #ROOT_PROMT = "I'm looking for a magic number. I'm not sure if it's in this chunk, but tell me if you can find it."
-    
-    #ROOT_PROMT = "I'm looking for a magic number. I know that there is ONLY one magic number in the entire context. Return the magic number if you can find it in your chunk. If you can't find any, return 'I couldn't find any magic numbers.'"
-
-    #ROOT_PROMT = "I'm looking for two magic numbers."
+    #ROOT_PROMT = "I'm looking for two numbers in the context."
 
     ROOT_PROMT = "Where is Stevens Institute of Technology located?"
 
-    #ROOT_PROMT = "Assume you know nothing and presented only with the given context. Answer this question: Where is Stevens Institute of Technology located?"
-    
+    #ROOT_PROMT = "Based on the given context, answer the following question: Where is Stevens Institute of Technology located?"
+
+    #ROOT_PROMT = "Based on the given context and the conversation, answer the following question: Where do they think Stevens Institute of Technology is located?"
+
     # Initialize RLM with custom system prompt
     load_dotenv()
     logger = RLMLogger(log_dir="./logs")
     rlm = RLM(
         backend="openai",  # or "portkey", etc.
         backend_kwargs={
-            "model_name": "gpt-5-nano-2025-08-07", 
+            #"model_name": "gpt-5-nano-2025-08-07",
+            "model_name": "gpt-5-mini-2025-08-07",
             "api_key": os.getenv("OPENAI_API_KEY"),
         },
         environment="local",
@@ -181,8 +158,8 @@ def main():
         root_prompt=ROOT_PROMT  # User prompt
     )
 
-    #print(f"Result: {result.response}.\nExpected: {answer}")
     print(f"Result: {result.response}")
+    #print(f"Expected answer: {answer}")
     print(f"Stop workflow signal: {result.stop_workflow}")
 
 if __name__ == "__main__":

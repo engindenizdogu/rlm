@@ -12,7 +12,7 @@ logger = RLMLogger(log_dir="./logs")
 rlm = RLM(
     backend="openai",  # or "portkey", etc.
     backend_kwargs={
-        "model_name": "gpt-5-nano-2025-08-07", 
+        "model_name": "gpt-5-nano-2025-08-07",
         "api_key": os.getenv("OPENAI_API_KEY"),
     },
     environment="local",
