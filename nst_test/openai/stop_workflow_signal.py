@@ -10,6 +10,7 @@ from context_generation.context_generator import generate_massive_context, inser
 
 
 def main():
+    """
     # Create large context
     print("Example of using RLM (REPL) on a needle-in-haystack problem.")
     context = generate_massive_context(num_lines=10000, number_of_needles=2)
@@ -21,6 +22,11 @@ def main():
 
     # Read context file
     with open("../openai/input/massive_context.txt") as f:
+        context = f.read()
+    """
+
+    # Read context file (pdf-to-text output)
+    with open("../inputs/Speech and Language Processing - Daniel Jurafsky.txt") as f:
         context = f.read()
 
     CUSTOM_SYSTEM_PROMPT = textwrap.dedent(
@@ -34,10 +40,19 @@ def main():
     3. A `llm_query_batched` function that allows you to query multiple prompts concurrently: `llm_query_batched(prompts: List[str]) -> List[str]`. This is much faster than sequential `llm_query` calls when you have multiple independent queries. Results are returned in the same order as the input prompts.
     4. The ability to use `print()` statements to view the output of your REPL code and continue your reasoning.
 
-    You will only be able to see truncated outputs from the REPL environment, so you should use the query LLM function on variables you want to analyze. You will find this function especially useful when you have to analyze the semantics of the context. Use these variables as buffers to build up your final answer.
+    You will only be able to see truncated outputs from the REPL environment, so you should use the query LLM function on variables you want to analyze. You will find this function especially useful when you have to analyze the semantics of the context. You are encouraged to ask for structured outputs from your sub-LLM calls (e.g. JSON with particular fields) to help you track information and maintain state in your REPL environment through variables. You can use these variables as buffers to build up your final answer. An example of a structured output format is:
+    ```json
+    {
+        "answer": "The answer to the question",
+        "reasoning": "The reasoning behind the answer"
+    }
+    ```
+
+    Remember, your sub-LLM calls might not always find the answer, and that's okay! You can use them to gather information, analyze the context, and build up to your final answer iteratively.
+
     Make sure to explicitly look through the entire context in REPL before answering your query. An example strategy is to first look at the context and figure out a chunking strategy, then break up the context into smart chunks, and query an LLM per chunk with a particular question and save the answers to a buffer, then query an LLM with all the buffers to produce your final answer.
 
-    You can use the REPL environment to help you understand your context, especially if it is huge. Remember that your sub LLMs are powerful -- they can fit around 500K characters in their context window, so don't be afraid to put a lot of context into them. For example, a viable strategy is to feed 10 documents per sub-LLM query. Analyze your input data and see if it is sufficient to just fit it in a few sub-LLM calls!
+    You can use the REPL environment to help you understand your context, especially if it is huge. Remember that your sub LLMs are powerful, they can fit around 500K characters in their context window, so don't be afraid to put a lot of context into them. For example, a viable strategy is to feed 10 documents per sub-LLM query. Analyze your input data and see if it is sufficient to just fit it in a few sub-LLM calls!
 
     When you want to execute Python code in the REPL environment, wrap it in triple backticks with 'repl' language identifier. For example, say we want our recursive model to search for the magic number in the context (assuming the context is a string), and the context is very long, so we want to chunk it:
     ```repl
@@ -101,7 +116,7 @@ def main():
     2. Use FINAL_VAR(variable_name) to return a variable you have created in the REPL environment as your final output
 
     Global workflow recommendation (STOP_WORKFLOW):
-    When you are returning a final answer, you must also include exactly one `STOP_WORKFLOW(true)` or `STOP_WORKFLOW(false)` call in that same final response. Use lowercase boolean literals only (`true`/`false`), not `0/1`. Return this as plain text, NOT in code.
+    When you are returning `FINAL(...)` or `FINAL_VAR(...)`, you must also include exactly one `STOP_WORKFLOW(true)` or `STOP_WORKFLOW(false)` call in that same final response. Use lowercase boolean literals only (`true`/`false`), not `0/1`. Return this as plain text, NOT in code.
     - `FINAL(...)` and `FINAL_VAR(...)` indicate this RLM instance is returning a final answer.
     - `STOP_WORKFLOW(true|false)` indicates whether this instance recommends terminating the overall multi-instance workflow.
     - Set `STOP_WORKFLOW(true)` only when you are also returning `FINAL(...)` or `FINAL_VAR(...)`, and you are confident the overall user objective is globally satisfied.
@@ -109,6 +124,8 @@ def main():
     - Even when returning a final answer, `STOP_WORKFLOW(false)` is valid if additional RLM instances may still be needed.
 
     Example: if the task is to find two magic numbers and this instance finds only one, it can return a final local result but should output `STOP_WORKFLOW(false)` because the global objective is not yet complete. If the task is to find one magic number and this instance confidently finds it, it can return a final answer with `STOP_WORKFLOW(true)`. This is a simple illustration, and examples are not limited to needle-in-a-haystack problems.
+
+    IMPORTANT: Once you decide to return a final answer, do not include any more code blocks or LLM calls because that can cause confusion about what your final answer is. If you want to do any additional reasoning or analysis before answering, you are encouraged to use additional iterations for code execution.
     
     Valid combinations:
     - Final answer provided + `STOP_WORKFLOW(true)`
@@ -118,21 +135,27 @@ def main():
     - No final answer provided + `STOP_WORKFLOW(true)`
     - No final answer provided + `STOP_WORKFLOW(false)`
 
-    Think step by step carefully, plan, and execute this plan immediately in your response -- do not just say "I will do this" or "I will do that". Output to the REPL environment and recursive LLMs as much as possible. Remember to explicitly answer the original query in your final answer.
+    Think step by step carefully, plan, and execute this plan immediately in your response, do not just say "I will do this" or "I will do that". Output to the REPL environment and recursive LLMs as much as possible. Remember to explicitly answer the original query in your final answer.
     """
     )
 
-    #ROOT_PROMT = "I'm looking for a number in the context."
+    #ROOT_PROMPT = "I'm looking for a number in the context."
 
-    #ROOT_PROMT = "I'm looking for a number. I know that there is ONLY one number in the entire context. Return the number if you can find it in your chunk. If you can't find any, return 'I couldn't find any magic numbers.'"
+    #ROOT_PROMPT = "I'm looking for a number. I know that there is ONLY one number in the entire context. Return the number if you can find it in your chunk. If you can't find any, return 'I couldn't find any magic numbers.'"
 
-    #ROOT_PROMT = "I'm looking for two numbers in the context."
+    #ROOT_PROMPT = "I'm looking for two numbers in the context."
 
-    ROOT_PROMT = "Where is Stevens Institute of Technology located?"
+    #ROOT_PROMPT = "Where is Stevens Institute of Technology located?"
 
-    #ROOT_PROMT = "Based on the given context, answer the following question: Where is Stevens Institute of Technology located?"
+    #ROOT_PROMPT = "Based on the given context, answer the following question: Where is Stevens Institute of Technology located?"
 
-    #ROOT_PROMT = "Based on the given context and the conversation, answer the following question: Where do they think Stevens Institute of Technology is located?"
+    #ROOT_PROMPT = "Based on the given context and the conversation, answer the following question: Where do they think Stevens Institute of Technology is located?"
+
+    #ROOT_PROMPT = "Based on the given context, answer the following question: What are the two complementary pillars of Unity Catalog Business Semantics as described in the document?"
+
+    #ROOT_PROMPT = "Based on the given context, answer the following question. Even tough this is a short document, split it into five chunks and analyze each chunk iteratively in the REPL environment with `llm_query` to make sure you don't miss any details. Question: What are the two complementary pillars of Unity Catalog Business Semantics as described in the document?"
+
+    ROOT_PROMPT = "Based on the given context, answer the following question: What is the main idea behind the logit lens?"
 
     # Initialize RLM with custom system prompt
     load_dotenv()
@@ -147,7 +170,7 @@ def main():
         environment="local",
         environment_kwargs={},
         max_depth=1,
-        max_iterations=10,
+        max_iterations=25,
         custom_system_prompt=CUSTOM_SYSTEM_PROMPT,
         logger=logger,
         verbose=True,  # For printing to console with rich, disabled by default.
@@ -155,7 +178,7 @@ def main():
 
     result = rlm.completion(
         prompt=context,  # The file content (large context)
-        root_prompt=ROOT_PROMT  # User prompt
+        root_prompt=ROOT_PROMPT  # User prompt
     )
 
     print(f"Result: {result.response}")

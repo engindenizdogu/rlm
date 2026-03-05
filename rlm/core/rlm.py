@@ -252,7 +252,8 @@ class RLM:
                 # Verbose output for this iteration
                 self.verbose.print_iteration(iteration, i + 1)
 
-                if final_answer is not None:
+                # There should be no code blocks left to run
+                if final_answer is not None and not iteration.code_blocks:
                     time_end = time.perf_counter()
                     usage = lm_handler.get_usage_summary()
                     self.verbose.print_final_answer(final_answer)
