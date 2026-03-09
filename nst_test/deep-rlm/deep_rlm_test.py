@@ -34,15 +34,7 @@ def main():
     3. A `llm_query_batched` function that allows you to query multiple prompts concurrently: `llm_query_batched(prompts: List[str]) -> List[str]`. This is much faster than sequential `llm_query` calls when you have multiple independent queries. Results are returned in the same order as the input prompts.
     4. The ability to use `print()` statements to view the output of your REPL code and continue your reasoning.
 
-    You will only be able to see truncated outputs from the REPL environment, so you should use the query LLM function on variables you want to analyze. You will find this function especially useful when you have to analyze the semantics of the context. You are encouraged to ask for structured outputs from your sub-LLM calls (e.g. JSON with particular fields) to help you track information and maintain state in your REPL environment through variables. You can use these variables as buffers to build up your final answer. An example of a structured output format is:
-    ```json
-    {
-        "answer": "The answer to the question",
-        "reasoning": "The reasoning behind the answer"
-    }
-    ```
-
-    Remember, your sub-LLM calls might not always find the answer, and that's okay! You can use them to gather information, analyze the context, and build up to your final answer iteratively.
+    You will only be able to see truncated outputs from the REPL environment, so you should use the query LLM function on variables you want to analyze. You will find this function especially useful when you have to analyze the semantics of the context. You are encouraged to ask for structured outputs from your sub-LLM calls (e.g. JSON with particular fields) to help you track information and maintain state in your REPL environment through variables. You can use these variables as buffers to build up your final answer.
 
     Make sure to explicitly look through the entire context in REPL before answering your query. An example strategy is to first look at the context and figure out a chunking strategy, then break up the context into smart chunks, and query an LLM per chunk with a particular question and save the answers to a buffer, then query an LLM with all the buffers to produce your final answer.
 
@@ -103,7 +95,7 @@ def main():
     ```
     In the next step, we can return FINAL_VAR(final_answer).
 
-    COMPLETION SIGNALS (IMPORTANT):
+    COMPLETION SIGNALS:
     Local completion (FINAL|FINAL_VAR):
     When you are done with the iterative process, you MUST provide a final answer inside a `FINAL(...)` or `FINAL_VAR(...)` function when you have completed your task, NOT in code. Do not use these tags unless you have completed your task. You have two options:
     1. Use FINAL(your final answer here) to provide the answer directly
@@ -113,8 +105,7 @@ def main():
     When you are returning `FINAL(...)` or `FINAL_VAR(...)`, you must also include exactly one `STOP_WORKFLOW(true)` or `STOP_WORKFLOW(false)` call in that same final response. Use lowercase boolean literals only (`true`/`false`), not `0/1`. Return this as plain text, NOT in code.
     - `FINAL(...)` and `FINAL_VAR(...)` indicate this RLM instance is returning a final answer.
     - `STOP_WORKFLOW(true|false)` indicates whether this instance recommends terminating the overall multi-instance workflow.
-    - Set `STOP_WORKFLOW(true)` ONLY WHEN you are confident the overall user objective is globally satisfied!
-    - When returning a final answer, `STOP_WORKFLOW(false)` is also valid if additional RLM instances may still be needed.
+    - Set `STOP_WORKFLOW(true)` ONLY WHEN you are confident that you have found the answer! Otherwise, set `STOP_WORKFLOW(false)` to signal that the overall workflow should continue if there are other RLM instances that can try to find the answer.
     - If you are not returning `FINAL(...)` or `FINAL_VAR(...)`, do not output any `STOP_WORKFLOW(...)` call yet.
 
     Example: if the task is to find two magic numbers and this instance finds only one, it can return a final local result but should output `STOP_WORKFLOW(false)` because the global objective is not yet complete. If the task is to find one magic number and this instance confidently finds it, it can return a final answer with `STOP_WORKFLOW(true)`. This is a simple illustration, and examples are not limited to needle-in-a-haystack problems.
@@ -129,15 +120,17 @@ def main():
     - No final answer provided + `STOP_WORKFLOW(true)`
     - No final answer provided + `STOP_WORKFLOW(false)`
 
-    IMPORTANT: You may not always be able to find the answer, and that's okay! If you think your context is insufficient or you are not confident in your answer, you can return a final answer explaining that you could not find the answer with `STOP_WORKFLOW(false)` to signal that the overall workflow should continue if there are other RLM instances that can try to find the answer. You should only return `STOP_WORKFLOW(true)` when you are confident the overall user objective is satisfied, even if you are not able to find a direct answer.
+    REMEMBER: You are an RLM instance that is part of a larger multi-instance workflow. You can only control your own instance and you cannot inspect or control other instances directly. REPL environments are NOT shared across instances. The input context of the multi-layer system is very large and you are only responsible for a small piece of it. If the answer does not exist in your context, it does not necessarily mean the answer does not exist in the overall system. It may just mean that you personally cannot find it with your local context and reasoning abilities. You can only return a final answer based on your own local context and reasoning process, and you should not make assumptions about what other instances may find or return.
+
+    IMPORTANT: You may not always be able to find the answer, and that's okay! If your context is insufficient or you are not confident in your answer, you can return a final answer explaining that you could not find the answer with `STOP_WORKFLOW(false)` so that other instances can continue working on the answer.
 
     Think step by step carefully, plan, and execute this plan immediately in your response, do not just say "I will do this" or "I will do that". Output to the REPL environment and recursive LLMs as much as possible. Remember to explicitly answer the original query in your final answer.
     """
     )
 
-    #ROOT_PROMPT = "Based on the given context, answer the following question: What is the main idea behind the logit lens?"
+    ROOT_PROMPT = "Based on the given context, answer the following question: What is the main idea behind the logit lens?"
 
-    ROOT_PROMPT = "Based on the given context, answer the following question: What color are unicorns?"
+    #ROOT_PROMPT = "Based on the given context, answer the following question: What color are unicorns?"
 
     # Initialize DeepRLM
     load_dotenv()

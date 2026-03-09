@@ -3,24 +3,13 @@
     {
       "id": 0,
       "depth": 0,
-      "response": "Based solely on the provided context (184,460 characters",
-      "stop_workflow": false,
+      "response": "The logit lens linearly projects intermediate hidden activations (typically the post\u2011LayerNorm residual stream) through the model\u2019s final unembedding (plus bias) to produce vocabulary logits/probabilities, revealing how token predictions emerge and change across layers.",
+      "stop_workflow": true,
       "error": null,
       "parent_id": null,
       "lo": 0,
       "hi": 10,
       "mid_index": 5
-    },
-    {
-      "id": 1,
-      "depth": 1,
-      "response": "The provided context contains no mentions of \"unicorn\" or related terms (searched for: \"unicorn\", \"unicorns\", \"unicorno\", \"licorne\", \"Einhorn\", \"unicornio\", \"monoceros\", \"one-horned\", \"single-horned\", \"horned horse\", etc.",
-      "stop_workflow": true,
-      "error": null,
-      "parent_id": 0,
-      "lo": 0,
-      "hi": 4,
-      "mid_index": 2
     }
   ]
 }
