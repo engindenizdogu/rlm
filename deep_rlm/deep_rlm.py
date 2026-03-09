@@ -1,8 +1,6 @@
 import math
 from concurrent.futures import ProcessPoolExecutor, as_completed
-
 from rlm import RLM
-
 from .tokenizer import count_words, tokenize
 
 
@@ -230,21 +228,21 @@ class DeepRLM:
         nodes = []
         node_id_counter = 0
 
-        # Initialize frontier with middle chunk
+        # Initialize frontier with middle chunk spanning full range
         mid_index = num_chunks // 2
         frontier = [
             {
                 "id": node_id_counter,
                 "depth": 0,
-                "lo": mid_index,
-                "hi": mid_index,
+                "lo": 0,
+                "hi": num_chunks - 1,
                 "mid_index": mid_index,
                 "chunk": chunks[mid_index],
                 "parent_id": None,
             }
         ]
         node_id_counter += 1
-        print(f"\nStarting from middle chunk: index {mid_index}")
+        print(f"\nStarting from middle chunk: index {mid_index} (range [0, {num_chunks - 1}])")
 
         global_stop = False
 
@@ -336,15 +334,15 @@ class DeepRLM:
                         global_stop = True
                         break
 
-                # If not stopped and not at max depth, branch based on index ranges
+                # If not stopped and not at max depth, branch based on parent's range
                 if node["depth"] < self.max_system_depth and result["error"] is None:
-                    lo, hi = node["lo"], node["hi"]
+                    mid = node["mid_index"]
 
-                    # Determine left and right ranges
-                    left_lo = 0
-                    left_hi = lo - 1
-                    right_lo = hi + 1
-                    right_hi = num_chunks - 1
+                    # Determine left and right ranges within parent's bounds
+                    left_lo = node["lo"]
+                    left_hi = mid - 1
+                    right_lo = mid + 1
+                    right_hi = node["hi"]
 
                     # Create child nodes if ranges are valid
                     if left_lo <= left_hi:

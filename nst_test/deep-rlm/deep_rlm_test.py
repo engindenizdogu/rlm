@@ -1,3 +1,4 @@
+import json
 import os
 import random
 import textwrap
@@ -8,6 +9,7 @@ from deep_rlm.deep_rlm import DeepRLM
 from rlm.logger import RLMLogger
 
 def main():
+    """
     # Generate 'massive' context
     answer = str(random.randint(1000000, 9999999))
     context = generate_massive_context(num_lines=100, answer=answer)
@@ -15,6 +17,11 @@ def main():
     # Save context file for debugging and inspection
     with open("massive_context.txt", "w") as f:
         f.write(context)
+    """
+
+    # Read context file (pdf-to-text output)
+    with open("../inputs/Speech and Language Processing - Daniel Jurafsky.txt") as f:
+        context = f.read()
 
     CUSTOM_SYSTEM_PROMPT = textwrap.dedent(
     """You are currently executing an RLM instance inside a multi-layered RLM workflow. You are not the orchestrator, and you cannot control or inspect other instances directly. A higher-level orchestrator may run many RLM instances across layers, either sequentially or in parallel, where each instance contributes partial progress toward a shared global objective.
@@ -27,10 +34,19 @@ def main():
     3. A `llm_query_batched` function that allows you to query multiple prompts concurrently: `llm_query_batched(prompts: List[str]) -> List[str]`. This is much faster than sequential `llm_query` calls when you have multiple independent queries. Results are returned in the same order as the input prompts.
     4. The ability to use `print()` statements to view the output of your REPL code and continue your reasoning.
 
-    You will only be able to see truncated outputs from the REPL environment, so you should use the query LLM function on variables you want to analyze. You will find this function especially useful when you have to analyze the semantics of the context. Use these variables as buffers to build up your final answer.
+    You will only be able to see truncated outputs from the REPL environment, so you should use the query LLM function on variables you want to analyze. You will find this function especially useful when you have to analyze the semantics of the context. You are encouraged to ask for structured outputs from your sub-LLM calls (e.g. JSON with particular fields) to help you track information and maintain state in your REPL environment through variables. You can use these variables as buffers to build up your final answer. An example of a structured output format is:
+    ```json
+    {
+        "answer": "The answer to the question",
+        "reasoning": "The reasoning behind the answer"
+    }
+    ```
+
+    Remember, your sub-LLM calls might not always find the answer, and that's okay! You can use them to gather information, analyze the context, and build up to your final answer iteratively.
+
     Make sure to explicitly look through the entire context in REPL before answering your query. An example strategy is to first look at the context and figure out a chunking strategy, then break up the context into smart chunks, and query an LLM per chunk with a particular question and save the answers to a buffer, then query an LLM with all the buffers to produce your final answer.
 
-    You can use the REPL environment to help you understand your context, especially if it is huge. Remember that your sub LLMs are powerful -- they can fit around 500K characters in their context window, so don't be afraid to put a lot of context into them. For example, a viable strategy is to feed 10 documents per sub-LLM query. Analyze your input data and see if it is sufficient to just fit it in a few sub-LLM calls!
+    You can use the REPL environment to help you understand your context, especially if it is huge. Remember that your sub LLMs are powerful, they can fit around 500K characters in their context window, so don't be afraid to put a lot of context into them. For example, a viable strategy is to feed 10 documents per sub-LLM query. Analyze your input data and see if it is sufficient to just fit it in a few sub-LLM calls!
 
     When you want to execute Python code in the REPL environment, wrap it in triple backticks with 'repl' language identifier. For example, say we want our recursive model to search for the magic number in the context (assuming the context is a string), and the context is very long, so we want to chunk it:
     ```repl
@@ -94,14 +110,16 @@ def main():
     2. Use FINAL_VAR(variable_name) to return a variable you have created in the REPL environment as your final output
 
     Global workflow recommendation (STOP_WORKFLOW):
-    When you are returning a final answer, you must also include exactly one `STOP_WORKFLOW(true)` or `STOP_WORKFLOW(false)` call in that same final response. Use lowercase boolean literals only (`true`/`false`), not `0/1`. Return this as plain text, NOT in code.
+    When you are returning `FINAL(...)` or `FINAL_VAR(...)`, you must also include exactly one `STOP_WORKFLOW(true)` or `STOP_WORKFLOW(false)` call in that same final response. Use lowercase boolean literals only (`true`/`false`), not `0/1`. Return this as plain text, NOT in code.
     - `FINAL(...)` and `FINAL_VAR(...)` indicate this RLM instance is returning a final answer.
     - `STOP_WORKFLOW(true|false)` indicates whether this instance recommends terminating the overall multi-instance workflow.
-    - Set `STOP_WORKFLOW(true)` only when you are also returning `FINAL(...)` or `FINAL_VAR(...)`, and you are confident the overall user objective is globally satisfied.
+    - Set `STOP_WORKFLOW(true)` ONLY WHEN you are confident the overall user objective is globally satisfied!
+    - When returning a final answer, `STOP_WORKFLOW(false)` is also valid if additional RLM instances may still be needed.
     - If you are not returning `FINAL(...)` or `FINAL_VAR(...)`, do not output any `STOP_WORKFLOW(...)` call yet.
-    - Even when returning a final answer, `STOP_WORKFLOW(false)` is valid if additional RLM instances may still be needed.
 
     Example: if the task is to find two magic numbers and this instance finds only one, it can return a final local result but should output `STOP_WORKFLOW(false)` because the global objective is not yet complete. If the task is to find one magic number and this instance confidently finds it, it can return a final answer with `STOP_WORKFLOW(true)`. This is a simple illustration, and examples are not limited to needle-in-a-haystack problems.
+
+    IMPORTANT: Once you decide to return a final answer, do not include any more code blocks or LLM calls because that can cause confusion about what your final answer is. If you want to do any additional reasoning or analysis before answering, you are encouraged to use additional iterations for code execution.
     
     Valid combinations:
     - Final answer provided + `STOP_WORKFLOW(true)`
@@ -111,11 +129,15 @@ def main():
     - No final answer provided + `STOP_WORKFLOW(true)`
     - No final answer provided + `STOP_WORKFLOW(false)`
 
-    Think step by step carefully, plan, and execute this plan immediately in your response -- do not just say "I will do this" or "I will do that". Output to the REPL environment and recursive LLMs as much as possible. Remember to explicitly answer the original query in your final answer.
+    IMPORTANT: You may not always be able to find the answer, and that's okay! If you think your context is insufficient or you are not confident in your answer, you can return a final answer explaining that you could not find the answer with `STOP_WORKFLOW(false)` to signal that the overall workflow should continue if there are other RLM instances that can try to find the answer. You should only return `STOP_WORKFLOW(true)` when you are confident the overall user objective is satisfied, even if you are not able to find a direct answer.
+
+    Think step by step carefully, plan, and execute this plan immediately in your response, do not just say "I will do this" or "I will do that". Output to the REPL environment and recursive LLMs as much as possible. Remember to explicitly answer the original query in your final answer.
     """
     )
 
-    ROOT_PROMPT="I'm looking for a magic number. I'm not sure if it's in this chunk, but tell me if you can find it."
+    #ROOT_PROMPT = "Based on the given context, answer the following question: What is the main idea behind the logit lens?"
+
+    ROOT_PROMPT = "Based on the given context, answer the following question: What color are unicorns?"
 
     # Initialize DeepRLM
     load_dotenv()
@@ -123,17 +145,17 @@ def main():
     deepRLM = DeepRLM(
         num_rlms_in_depth = 2,  # Maximum number of RLMs in depth for recursive reasoning (not used in run_binary(...))
         max_system_depth = 10,  # Maximum system depth for recursive reasoning
-        token_limit = 200,      # Token limit for a single RLM.
+        token_limit = 50000,    # Token limit for a single RLM.
         max_parallel_workers=4, # Limit concurrent RLM instances (not used in run(...))
         backend="openai",
         backend_kwargs={
-            "model_name": "gpt-5-nano-2025-08-07",
+            "model_name": "gpt-5-mini-2025-08-07",
             "api_key": os.getenv("OPENAI_API_KEY"),
             },
         environment="local",
         environment_kwargs={},
         max_depth=1,
-        max_iterations=5,
+        max_iterations=10,
         custom_system_prompt=CUSTOM_SYSTEM_PROMPT,
         logger=logger,
         verbose=False,
@@ -142,14 +164,20 @@ def main():
     start = time.time()
     #results = deepRLM.run(
     results = deepRLM.run_binary(
-        context=context,    # The file content (large context)
-        prompt=ROOT_PROMPT  # User prompt
+        context=context,        # The file content (large context)
+        prompt=ROOT_PROMPT,     # User prompt
+        stop_mode="immediate"   # Stop the workflow immediately when any RLM instance signals a final answer
     )
     end = time.time()
 
     print(f"\nExecution time: {end - start:.2f} seconds")
     print("=========== RESULTS ===========")
     print(results)
+    
+    # Save results to JSON file
+    with open("output.json", "w") as f:
+        json.dump(results, f, indent=2)
+    print("\nResults saved to output.json")
 
 if __name__ == "__main__":
     main()
